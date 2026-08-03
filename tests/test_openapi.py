@@ -71,7 +71,11 @@ def test_openapi_templates_package_and_export_contracts() -> None:
         assert len(declarative_agent["conversation_starters"]) == 2
         assert "getAuthContext" in declarative_agent["instructions"]
         assert "setAuthContext" in declarative_agent["instructions"]
+        assert "Do not call getAssessmentSummary" in declarative_agent["instructions"]
+        assert "do not relabel the failure as query failed" in declarative_agent["instructions"]
+        assert "never treat a user-provided GUID as validated" in declarative_agent["instructions"]
         assert "conversationStarters" not in declarative_agent
+        assert manifest["version"] == "1.1.1"
         assert plugin_document["schema_version"] == "v2.4"
         assert plugin_document["namespace"] == "azureSecurityPosture"
         assert plugin_document["runtimes"][0]["auth"] == {

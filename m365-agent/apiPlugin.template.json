@@ -2,12 +2,12 @@
   "schema_version": "v2.4",
   "name_for_human": "Azure Security",
   "description_for_human": "Review Azure security posture findings and recommendations.",
-  "description_for_model": "Call the safe read-only Azure Security Posture Agent API to discover and validate delegated tenant and subscription context before getting assessment summaries, findings, recommendations, or triggering a read-only assessment run.",
+  "description_for_model": "Call getAuthContext and setAuthContext successfully before any assessment operation. Use only the token tenant and subscriptions returned by live delegated discovery. Stop on authentication or scope validation errors and preserve the API error category, status, message, and remediation guidance exactly.",
   "namespace": "azureSecurityPosture",
   "functions": [
     {
       "name": "getAuthContext",
-      "description": "Discover the OAuth token tenant and Azure tenants and subscriptions visible through delegated RBAC.",
+      "description": "Mandatory first call. Discover the OAuth token tenant and Azure tenants and subscriptions visible through delegated RBAC. Do not ask for or infer scope before this call succeeds.",
       "capabilities": {
         "security_info": {
           "data_handling": ["GetPrivateData"]
@@ -16,7 +16,7 @@
     },
     {
       "name": "setAuthContext",
-      "description": "Validate a target tenant and subscription selection against the delegated OAuth token and live Azure access.",
+      "description": "Mandatory second call. Validate a target tenant and subscription selection against the delegated OAuth token and live Azure access. Stop on any mismatch or denied subscription.",
       "capabilities": {
         "security_info": {
           "data_handling": ["GetPrivateData"]
