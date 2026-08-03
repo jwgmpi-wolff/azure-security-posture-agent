@@ -44,6 +44,15 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
+      - name: Validate release
+        shell: pwsh
+        run: |
+          python -m py_compile app/main.py app/models.py app/services/azure_auth.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m pytest -q
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          az bicep build --file infra/main.bicep --stdout | Out-Null
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Log in to Azure
         uses: azure/login@v2
         with:

@@ -1,11 +1,23 @@
 # Azure Security Posture Agent
 
 [![Validate](https://github.com/jwgmpi-wolff/azure-security-posture-agent/actions/workflows/validate.yml/badge.svg)](https://github.com/jwgmpi-wolff/azure-security-posture-agent/actions/workflows/validate.yml)
+[![Open live dashboard](https://img.shields.io/badge/Open-Live%20dashboard-0F766E?logo=microsoftazure&logoColor=white)](https://azure-security-posture-agent.proudpond-f420a0cc.eastus2.azurecontainerapps.io/)
 [![Deploy Azure + M365 Package](https://img.shields.io/badge/Deploy-Azure%20%2B%20M365%20package-0078D4?logo=microsoftazure&logoColor=white)](https://github.com/jwgmpi-wolff/azure-security-posture-agent/actions/workflows/deploy-azure-m365.yml)
 [![Deploy infrastructure to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fjwgmpi-wolff%2Fazure-security-posture-agent%2Fmain%2Finfra%2Fazuredeploy.json)
+[![Install in Microsoft 365](https://img.shields.io/badge/Install-Microsoft%20365-5E5E5E?logo=microsoft365&logoColor=white)](#install-in-microsoft-365-copilot)
 [![Run locally](https://img.shields.io/badge/Run-locally-127C75?logo=powershell&logoColor=white)](#deploy-locally)
 
 A live-data-only, read-only Azure security assessment service with a FastAPI API, responsive browser dashboard, evidence-backed exports, and a Microsoft 365 Copilot declarative agent. It uses the signed-in user's delegated Azure RBAC and never executes remediation.
+
+## Deployment Options
+
+| Entry point | Functionality | Required boundary |
+| --- | --- | --- |
+| **Open live dashboard** | Opens the currently deployed Azure Container App. | Browser sign-in and delegated Azure RBAC are still required for assessment data. |
+| **Deploy Azure + M365 Package** | Runs the manual GitHub workflow, validates the release, deploys Azure resources and application code, runs smoke tests, and uploads the generated M365 package. | Requires approved `production` environment secrets and inputs. Interactive M365 installation remains a workstation step. |
+| **Deploy to Azure** | Opens the Azure portal with the versioned ARM template. | Provisions infrastructure only; image build, Entra registration, OAuth vault, and M365 installation are intentionally separate. |
+| **Install in Microsoft 365** | Jumps to the delegated Agents Toolkit package and installation workflow. | Requires an existing OAuth vault reference and interactive M365 sign-in. |
+| **Run locally** | Jumps to the PowerShell bootstrap that installs, validates, opens, and runs the app at `http://127.0.0.1:8010`. | GitHub cannot execute local scripts from a badge; run the shown command from PowerShell 7. |
 
 ## Screenshots
 
@@ -17,7 +29,7 @@ A live-data-only, read-only Azure security assessment service with a FastAPI API
 
 <img src="docs/screenshots/dashboard-mobile.png" alt="Azure Security Posture Agent mobile dashboard" width="390">
 
-The screenshots show the safe pre-authentication state and contain no tenant or customer data.
+The screenshots are single-frame captures of the deployed responsive dashboard at 1440x900 and 390x844. They show the safe pre-authentication state and contain no tenant or customer data.
 
 ## What It Does
 
@@ -26,6 +38,8 @@ The screenshots show the safe pre-authentication state and contain no tenant or 
 - Returns findings only when they include source metadata, observation time, evidence ID, and embedded evidence.
 - Records permission limits and upstream failures as structured partial failures instead of clean results.
 - Exports deterministic, redacted CSV, PDF, PowerPoint, and SQLite artifacts.
+- Applies one severity/domain selection to both findings and their linked recommendations.
+- Opens an evidence-linked fix guide with plain-language steps, effort estimates, detailed actions, and Microsoft Learn references without executing remediation.
 - Supports browser PKCE, local Azure CLI sessions, and Microsoft 365 Copilot OAuth with confidential-client OBO to ARM.
 - Supports explicit cross-tenant context validation without relabeling or reusing a token from the wrong tenant.
 
@@ -216,6 +230,7 @@ SECURITY RULES
 - Runtime assessment access uses the signed-in user's delegated Azure RBAC. Managed identity is limited to ACR pull.
 - Never expose access/refresh tokens, authorization headers, cookies, client secrets, keys, certificates, or connection strings in responses, browser storage, logs, packages, screenshots, or exports.
 - Browser auth uses authorization code with PKCE and an opaque Secure/HttpOnly/SameSite cookie. Keep tokens server-side in memory.
+- Validate the browser ID token against the exact application client ID, issuer, signature, expiry, and selected tenant. Treat the Microsoft-owned ARM access token as opaque client material and use it only for ARM requests.
 - Copilot validates token signature, issuer, audience, expiry, and tenant, then uses confidential-client OAuth OBO for ARM. Never reuse the API token against ARM.
 - Cross-tenant context is token-bound. A requested tenant must equal token tid. On mismatch return 403 instructing the user to reconnect OAuth in the requested tenant. Never relabel a token or substitute managed identity.
 - Before every bearer assessment, enumerate live ARM subscriptions and reject IDs outside delegated access.
@@ -248,7 +263,7 @@ GET /api/copilot/assessment-summary, /security-findings, /recommendations
 GET Copilot auth context returns tokenTenantId, selectedTenantId, discoverable tenants/subscriptions, source endpoints, and safe reauthentication guidance. POST validates tenant/subscriptions statelessly. POST assessment accepts cookie or bearer auth and does not persist ephemeral bearer sessions.
 
 DASHBOARD
-Create app/static/index.html, styles.css, app.js as the usable first screen. Include session status, tenant/redirect inputs, browser/CLI auth, tenant/subscription selection, twelve-domain controls, strict validation, run controls, exports, summary, findings, evidence, partial failures, recommendations, and status. Make it accessible and responsive at 390px and desktop widths. Never store tokens in JavaScript.
+Create app/static/index.html, styles.css, app.js as the usable first screen. Include session status, tenant/redirect inputs, browser/CLI auth, tenant/subscription selection, twelve-domain controls, strict validation, run controls, exports, summary, findings, evidence, partial failures, recommendations, and status. Make it accessible and responsive at 390px and desktop widths. Never store tokens in JavaScript. A severity or domain selection in Findings must apply to both findings and their evidence-linked recommendations. Each recommendation must expose a Fix Guide dialog with numbered third-grade reading-level steps, an effort estimate, exact detailed actions, and relevant Microsoft Learn links; it must never execute those actions.
 
 EXPORTS
 CSV separates finding/recommendation records and serializes evidence deterministically. PDF includes scope, summary, findings, recommendations, evidence, and gaps. PPTX has exactly ten executive slides. SQLite normalizes assessment_runs, tenants, subscriptions, resources, findings, recommendations, evidence, api_query_log, export_artifacts. Return 404 before an assessment.
