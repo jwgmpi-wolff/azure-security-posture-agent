@@ -1,0 +1,87 @@
+{
+  "schema_version": "v2.4",
+  "name_for_human": "Azure Security",
+  "description_for_human": "Review Azure security posture findings and recommendations.",
+  "description_for_model": "Call the safe read-only Azure Security Posture Agent API to discover and validate delegated tenant and subscription context before getting assessment summaries, findings, recommendations, or triggering a read-only assessment run.",
+  "namespace": "azureSecurityPosture",
+  "functions": [
+    {
+      "name": "getAuthContext",
+      "description": "Discover the OAuth token tenant and Azure tenants and subscriptions visible through delegated RBAC.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": ["GetPrivateData"]
+        }
+      }
+    },
+    {
+      "name": "setAuthContext",
+      "description": "Validate a target tenant and subscription selection against the delegated OAuth token and live Azure access.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": ["GetPrivateData"]
+        }
+      }
+    },
+    {
+      "name": "getAssessmentSummary",
+      "description": "Get or compute a read-only Azure security posture assessment summary.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": ["GetPrivateData"]
+        }
+      }
+    },
+    {
+      "name": "getSecurityFindings",
+      "description": "Get filtered evidence-backed Azure security findings.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": ["GetPrivateData"]
+        }
+      }
+    },
+    {
+      "name": "getRecommendations",
+      "description": "Get recommendations derived from the latest grounded findings.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": ["GetPrivateData"]
+        }
+      }
+    },
+    {
+      "name": "runReadOnlyAssessment",
+      "description": "Run a live read-only assessment for selected Azure subscriptions.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": ["GetPrivateData"]
+        }
+      }
+    }
+  ],
+  "runtimes": [
+    {
+      "type": "OpenApi",
+      "auth": {
+        "type": "OAuthPluginVault",
+        "reference_id": "{{OAUTH_REFERENCE_ID}}"
+      },
+      "run_for_functions": [
+        "getAuthContext",
+        "setAuthContext",
+        "getAssessmentSummary",
+        "getSecurityFindings",
+        "getRecommendations",
+        "runReadOnlyAssessment"
+      ],
+      "spec": {
+        "url": "openapi.yaml"
+      }
+    }
+  ],
+  "logo_url": "{{API_BASE_URL}}/color.png",
+  "contact_email": "{{CONTACT_EMAIL}}",
+  "legal_info_url": "{{API_BASE_URL}}/",
+  "privacy_policy_url": "{{API_BASE_URL}}/"
+}

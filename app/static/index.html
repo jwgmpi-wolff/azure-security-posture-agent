@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure Security Posture Agent</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <main class="shell">
+        <section class="hero">
+            <div>
+                <p class="eyebrow">Read-only Azure posture</p>
+                <h1>Azure Security Posture Agent</h1>
+                <p class="lede">Run live delegated assessments across twelve security domains, inspect evidence, and export redacted artifacts without executing remediation.</p>
+            </div>
+            <div class="hero-panel">
+                <h2>Session</h2>
+                <pre id="sessionState">No active session</pre>
+            </div>
+        </section>
+
+        <section class="grid two-up">
+            <article class="panel">
+                <h2>Authenticate</h2>
+                <label>Tenant ID
+                    <input id="tenantId" type="text" placeholder="00000000-0000-0000-0000-000000000000">
+                </label>
+                <label>Redirect URI
+                    <input id="redirectUri" type="text" placeholder="http://localhost:8000/api/auth/browser/callback">
+                </label>
+                <div class="button-row">
+                    <button id="startBrowserAuth">Browser Sign-In</button>
+                    <button id="startCliAuth">Use Azure CLI Session</button>
+                    <button id="clearSession" class="secondary">Sign Out</button>
+                </div>
+                <p class="hint">The browser flow uses PKCE and stores only an HttpOnly session cookie. No token is stored in the browser.</p>
+            </article>
+
+            <article class="panel">
+                <h2>Scope</h2>
+                <div class="button-row">
+                    <button id="loadTenants">Load Tenants</button>
+                    <button id="loadSubscriptions">Load Subscriptions</button>
+                    <button id="applyScope" class="secondary">Apply Scope</button>
+                </div>
+                <label>Available Tenants
+                    <select id="tenantList" size="5"></select>
+                </label>
+                <label>Available Subscriptions
+                    <select id="subscriptionList" size="8" multiple></select>
+                </label>
+                <label class="checkbox-row"><input id="selectAllSubscriptions" type="checkbox"> Select all subscriptions</label>
+            </article>
+        </section>
+
+        <section class="grid two-up">
+            <article class="panel">
+                <h2>Assessment Controls</h2>
+                <div class="domain-grid" id="domainList"></div>
+                <label class="checkbox-row"><input id="includeGraph" type="checkbox"> Include optional Microsoft Graph enrichment</label>
+                <label class="checkbox-row"><input id="strictValidation" type="checkbox" checked> Strict live validation</label>
+                <div class="button-row">
+                    <button id="runAssessment">Run Assessment</button>
+                    <button id="loadLatest" class="secondary">Load Latest</button>
+                </div>
+            </article>
+
+            <article class="panel">
+                <h2>Exports</h2>
+                <div class="button-row wrap">
+                    <button data-export="csv" class="export">CSV</button>
+                    <button data-export="pdf" class="export">PDF</button>
+                    <button data-export="pptx" class="export">PPTX</button>
+                    <button data-export="sqlite" class="export">SQLite</button>
+                </div>
+                <p class="hint">Exports are available only after a live assessment and redact sensitive values before writing artifacts.</p>
+            </article>
+        </section>
+
+        <section class="panel" id="scopeBanner">No assessment scope selected.</section>
+        <section class="grid summary-grid" id="summaryCards"></section>
+
+        <section class="grid two-up results-layout">
+            <article class="panel tall">
+                <h2>Findings</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Domain</th>
+                            <th>Severity</th>
+                            <th>Title</th>
+                            <th>Resource</th>
+                        </tr>
+                    </thead>
+                    <tbody id="findingsTable"></tbody>
+                </table>
+            </article>
+            <article class="panel tall evidence-panel">
+                <h2>Evidence</h2>
+                <div id="evidenceView" class="evidence-view">Select a finding to inspect live evidence.</div>
+                <h3>Partial Failures</h3>
+                <ul id="partialFailures" class="failure-list"></ul>
+            </article>
+        </section>
+
+        <section class="panel tall">
+            <h2>Recommendations</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Priority</th>
+                        <th>Recommendation</th>
+                        <th>Evidence</th>
+                        <th>Observed</th>
+                    </tr>
+                </thead>
+                <tbody id="recommendationsTable"></tbody>
+            </table>
+        </section>
+
+        <section class="panel">
+            <h2>Status</h2>
+            <pre id="statusLog">Ready.</pre>
+        </section>
+    </main>
+    <script src="/static/app.js"></script>
+</body>
+</html>

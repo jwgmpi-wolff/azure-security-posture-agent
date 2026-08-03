@@ -1,0 +1,37 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.19/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.19",
+  "version": "1.1.0",
+  "id": "{{MANIFEST_ID}}",
+  "name": {
+    "short": "Security Posture",
+    "full": "Azure Security Posture Assessor"
+  },
+  "description": {
+    "short": "Live, read-only Azure security posture assessments.",
+    "full": "Performs live, read-only Azure security posture assessments across authorized tenants and subscriptions."
+  },
+  "developer": {
+    "name": "Azure Security Posture Assessor",
+    "mpnId": "",
+    "websiteUrl": "{{API_BASE_URL}}",
+    "privacyUrl": "{{API_BASE_URL}}/",
+    "termsOfUseUrl": "{{API_BASE_URL}}/"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#0078D4",
+  "copilotAgents": {
+    "declarativeAgents": [
+      {
+        "id": "azure-security-posture-agent",
+        "file": "declarativeAgent.json"
+      }
+    ]
+  },
+  "validDomains": [
+    "{{API_HOST}}"
+  ]
+}

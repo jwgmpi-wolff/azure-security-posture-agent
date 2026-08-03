@@ -1,0 +1,375 @@
+openapi: 3.0.3
+info:
+  title: Azure Security Posture Agent
+  version: 1.0.0
+  description: Safe delegated operations for Azure security posture summaries, findings, and recommendations.
+servers:
+  - url: '{{API_BASE_URL}}'
+paths:
+  /api/copilot/auth-context:
+    get:
+      operationId: getAuthContext
+      summary: Discover the delegated OAuth token tenant and authorized Azure scope
+      responses:
+        '200':
+          description: Current delegated authentication context and discoverable Azure scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CopilotAuthContext'
+    post:
+      operationId: setAuthContext
+      summary: Validate tenant and subscription context against delegated Azure access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScopeSelection'
+      responses:
+        '200':
+          description: Validated delegated authentication context
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CopilotAuthContext'
+        '403':
+          description: Token tenant mismatch or subscription access denied
+  /api/copilot/assessment-summary:
+    get:
+      operationId: getAssessmentSummary
+      summary: Get or compute a read-only Azure security posture assessment summary
+      parameters:
+        - in: query
+          name: tenantId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: subscriptionIds
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+      responses:
+        '200':
+          description: Assessment summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentSummary'
+  /api/copilot/security-findings:
+    get:
+      operationId: getSecurityFindings
+      summary: Get filtered evidence-backed security findings
+      parameters:
+        - in: query
+          name: tenantId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: subscriptionIds
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+        - in: query
+          name: domain
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: severity
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: subscriptionId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: resourceGroup
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: resourceType
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Findings payload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Finding'
+                  count:
+                    type: integer
+  /api/copilot/recommendations:
+    get:
+      operationId: getRecommendations
+      summary: Get the recommendations register derived from the latest grounded findings
+      parameters:
+        - in: query
+          name: tenantId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: subscriptionIds
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+      responses:
+        '200':
+          description: Recommendations payload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Recommendation'
+                  count:
+                    type: integer
+  /api/assessment/run:
+    post:
+      operationId: runReadOnlyAssessment
+      summary: Run a read-only assessment for the selected tenant and subscriptions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tenantId:
+                  type: string
+                subscriptionIds:
+                  type: array
+                  items:
+                    type: string
+                domains:
+                  type: array
+                  items:
+                    type: string
+                strictValidation:
+                  type: boolean
+      responses:
+        '200':
+          description: Assessment summary and findings metadata
+          content:
+            application/json:
+              schema:
+                type: object
+security:
+  - OAuth2: []
+components:
+  securitySchemes:
+    OAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: '{{OAUTH_AUTHORITY}}/oauth2/v2.0/authorize'
+          tokenUrl: '{{OAUTH_AUTHORITY}}/oauth2/v2.0/token'
+          scopes:
+            api://{{OAUTH_CLIENT_ID}}/access_as_user: Delegated access to the Azure Security Posture Agent API
+  schemas:
+    ScopeSelection:
+      type: object
+      required:
+        - tenantId
+      properties:
+        tenantId:
+          type: string
+        subscriptionIds:
+          type: array
+          items:
+            type: string
+    CopilotAuthContext:
+      type: object
+      required:
+        - authenticated
+        - tokenTenantId
+        - selectedTenantId
+      properties:
+        authenticated:
+          type: boolean
+        tokenTenantId:
+          type: string
+        selectedTenantId:
+          type: string
+        subscriptionIds:
+          type: array
+          items:
+            type: string
+        availableTenants:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tenant'
+        availableSubscriptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subscription'
+        sourceEndpoints:
+          type: array
+          items:
+            type: string
+        authenticationGuidance:
+          type: string
+          nullable: true
+    Tenant:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        tenantName:
+          type: string
+          nullable: true
+    Subscription:
+      type: object
+      properties:
+        subscriptionId:
+          type: string
+        subscriptionName:
+          type: string
+          nullable: true
+        tenantId:
+          type: string
+    AssessmentSummary:
+      type: object
+      properties:
+        runId:
+          type: string
+        tenantId:
+          type: string
+        tenantName:
+          type: string
+          nullable: true
+        subscriptionIds:
+          type: array
+          items:
+            type: string
+        domains:
+          type: array
+          items:
+            type: string
+        totalFindings:
+          type: integer
+        totalRecommendations:
+          type: integer
+        partialFailureCount:
+          type: integer
+        grounded:
+          type: boolean
+    Evidence:
+      type: object
+      properties:
+        evidenceId:
+          type: string
+        findingId:
+          type: string
+        sourceSystem:
+          type: string
+        sourceApi:
+          type: string
+        observedAtUtc:
+          type: string
+          format: date-time
+        recordType:
+          type: string
+        summary:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+    Finding:
+      type: object
+      properties:
+        findingId:
+          type: string
+        runId:
+          type: string
+        tenantId:
+          type: string
+        subscriptionId:
+          type: string
+        domain:
+          type: string
+        severity:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        sourceSystem:
+          type: string
+        sourceApi:
+          type: string
+        evidenceId:
+          type: string
+        recommendation:
+          type: string
+        remediationText:
+          type: string
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/Evidence'
+    Recommendation:
+      type: object
+      properties:
+        recommendationId:
+          type: string
+        findingId:
+          type: string
+        title:
+          type: string
+        priority:
+          type: string
+        recommendation:
+          type: string
+        remediationText:
+          type: string
+        sourceSystem:
+          type: string
+        sourceApi:
+          type: string
+        evidenceId:
+          type: string
+    ExportMetadata:
+      type: object
+      properties:
+        exportId:
+          type: string
+        runId:
+          type: string
+        format:
+          type: string
+        fileName:
+          type: string
+        generatedAtUtc:
+          type: string
+          format: date-time
+        recordCount:
+          type: integer

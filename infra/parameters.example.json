@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "eastus"
+    },
+    "tenantId": {
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    "clientId": {
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    "authority": {
+      "value": "https://login.microsoftonline.com/common"
+    },
+    "registryName": {
+      "value": "secpostureexample"
+    },
+    "containerAppName": {
+      "value": "azure-security-posture-agent"
+    },
+    "managedEnvironmentName": {
+      "value": "sec-posture-env"
+    },
+    "logAnalyticsWorkspaceName": {
+      "value": "sec-posture-law"
+    },
+    "applicationInsightsName": {
+      "value": "appi-sec-posture"
+    },
+    "enableManagedIdentity": {
+      "value": true
+    },
+    "allowedOrigins": {
+      "value": [
+        "https://example.contoso.com"
+      ]
+    }
+  }
+}
