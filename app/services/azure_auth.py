@@ -55,13 +55,16 @@ def _parse_expires_on(raw_value: str | int | None) -> datetime:
         return datetime.fromisoformat(raw_value.replace("Z", "+00:00")).astimezone(UTC)
 
 
-async def fetch_openid_configuration(tenant_id: str) -> dict[str, str]:
-    cache_key = tenant_id
+async def fetch_openid_configuration(tenant_id: str, token_version: str = "2.0") -> dict[str, str]:
+    if token_version not in {"1.0", "2.0"}:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unsupported bearer token version.")
+    cache_key = f"{tenant_id}:{token_version}"
     if cache_key in OIDC_CACHE:
         return OIDC_CACHE[cache_key]
     authority_root = settings.entra_authority.rstrip("/")
     base = authority_root.rsplit("/", 1)[0] if authority_root.endswith("/common") else authority_root
-    url = f"{base}/{tenant_id}/v2.0/.well-known/openid-configuration"
+    metadata_path = "v2.0/.well-known/openid-configuration" if token_version == "2.0" else ".well-known/openid-configuration"
+    url = f"{base}/{tenant_id}/{metadata_path}"
     async with httpx.AsyncClient(timeout=30.0, headers={"User-Agent": settings.user_agent}) as client:
         response = await client.get(url)
     if response.status_code >= 400:
@@ -76,7 +79,8 @@ async def validate_jwt_token(token: str, tenant_id: str, audience: str) -> dict[
     token_tenant_id = str(unverified_claims.get("tid") or tenant_id)
     if token_tenant_id != tenant_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token tenant does not match the selected tenant.")
-    configuration = await fetch_openid_configuration(tenant_id)
+    token_version = str(unverified_claims.get("ver") or "1.0")
+    configuration = await fetch_openid_configuration(tenant_id, token_version)
     jwks_uri = configuration["jwks_uri"]
     jwks_client = JWKS_CLIENT_CACHE.setdefault(jwks_uri, PyJWKClient(jwks_uri))
     signing_key = jwks_client.get_signing_key_from_jwt(token).key
