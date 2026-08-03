@@ -6,7 +6,7 @@ import json
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from app.auth import SESSION_STORE
+from app.auth import SESSION_STORE, STATE_STORE
 from app.config import settings
 from app.main import app
 from app.models import Subscription, Tenant
@@ -44,6 +44,54 @@ def test_health_and_auth_context_serialize_authenticated_cli_session() -> None:
     assert context.status_code == 200
     assert context.json()["authenticated"] is True
     assert context.json()["authMode"] == "cli"
+
+
+def test_browser_start_returns_dashboard_contract_with_account_selection() -> None:
+    response = TestClient(app).get(
+        "/api/auth/browser/start",
+        params={
+            "tenant_id": "tenant-2",
+            "redirect_uri": settings.browser_redirect_allowlist[0],
+        },
+    )
+
+    assert response.status_code == 200
+    assert set(response.json()) == {"authorizationUrl", "state"}
+    assert "prompt=select_account" in response.json()["authorizationUrl"]
+
+
+def test_browser_callback_sets_session_cookie_and_returns_to_dashboard(monkeypatch) -> None:
+    principal = build_session().principal
+    STATE_STORE.clear()
+    STATE_STORE["state-1"] = {
+        "tenant_id": "tenant-1",
+        "redirect_uri": "http://127.0.0.1:8010/api/auth/browser/callback",
+        "verifier": "verifier-1",
+        "challenge": "challenge-1",
+    }
+
+    async def fake_exchange(code, tenant_id, redirect_uri, verifier):
+        assert (code, tenant_id, verifier) == ("code-1", "tenant-1", "verifier-1")
+        return principal
+
+    monkeypatch.setattr("app.main.exchange_browser_code", fake_exchange)
+
+    response = TestClient(app).get(
+        "/api/auth/browser/callback",
+        params={"code": "code-1", "state": "state-1"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/"
+    assert settings.session_cookie_name in response.cookies
+
+
+def test_logout_is_idempotent_without_an_active_session() -> None:
+    response = TestClient(app).post("/api/auth/logout")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "signed_out"}
 
 
 def test_export_returns_404_before_assessment_run() -> None:

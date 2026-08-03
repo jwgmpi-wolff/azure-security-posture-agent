@@ -111,6 +111,7 @@ def build_authorization_url(tenant_id: str, redirect_uri: str, state: str, chall
             "state": state,
             "code_challenge": challenge,
             "code_challenge_method": "S256",
+            "prompt": "select_account",
         }
     )
     return f"{tenant_authority}?{query}"

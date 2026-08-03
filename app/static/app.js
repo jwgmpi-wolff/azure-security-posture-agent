@@ -452,9 +452,10 @@ async function applyScope() {
 
 async function startBrowserAuth() {
   const tenantId = tenantIdInput.value.trim() || tenantList.value;
-  const redirectUri = redirectUriInput.value.trim();
+  const redirectUri = redirectUriInput.value.trim() || `${window.location.origin}/api/auth/browser/callback`;
+  redirectUriInput.value = redirectUri;
   const payload = await api(`/api/auth/browser/start?tenant_id=${encodeURIComponent(tenantId)}&redirect_uri=${encodeURIComponent(redirectUri)}`);
-  window.location.assign(payload.authorization_url);
+  window.location.assign(payload.authorizationUrl);
 }
 
 async function startCliAuth() {
@@ -538,5 +539,6 @@ remediationDialog.addEventListener("click", (event) => {
 domainList.addEventListener("change", updateDomainSelectionSummary);
 document.querySelectorAll(".export").forEach((button) => button.addEventListener("click", () => runCommand(`Preparing ${button.dataset.export.toUpperCase()} export`, () => exportAssessment(button.dataset.export))));
 
+redirectUriInput.value ||= `${window.location.origin}/api/auth/browser/callback`;
 loadDomains().catch((error) => logStatus(error.message));
 refreshSession().catch((error) => logStatus(error.message));

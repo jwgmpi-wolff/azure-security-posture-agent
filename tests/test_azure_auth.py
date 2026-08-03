@@ -1,8 +1,23 @@
 import base64
 import json
 from subprocess import CompletedProcess
+from urllib.parse import parse_qs, urlparse
 
-from app.services.azure_auth import _parse_expires_on, _wrap_az_command, acquire_cli_principal
+from app.services.azure_auth import _parse_expires_on, _wrap_az_command, acquire_cli_principal, build_authorization_url
+
+
+def test_browser_authorization_forces_account_selection() -> None:
+    authorization_url = build_authorization_url(
+        "tenant-2",
+        "http://127.0.0.1:8010/api/auth/browser/callback",
+        "state",
+        "challenge",
+    )
+
+    query = parse_qs(urlparse(authorization_url).query)
+
+    assert query["prompt"] == ["select_account"]
+    assert "/tenant-2/oauth2/v2.0/authorize" in authorization_url
 
 
 def test_parse_expires_on_accepts_azure_cli_windows_format() -> None:

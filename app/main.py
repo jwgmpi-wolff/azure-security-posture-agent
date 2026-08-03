@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.auth import (
@@ -298,7 +298,7 @@ async def browser_auth_start(tenant_id: str = Query(..., min_length=1), redirect
 
 
 @app.get("/api/auth/browser/callback")
-async def browser_auth_callback(code: str, state: str, response: Response) -> dict[str, str]:
+async def browser_auth_callback(code: str, state: str) -> RedirectResponse:
     state_entry = pop_pkce_state(state)
     principal = await exchange_browser_code(code, state_entry["tenant_id"], state_entry["redirect_uri"], state_entry["verifier"])
     session = create_session(
@@ -312,8 +312,9 @@ async def browser_auth_callback(code: str, state: str, response: Response) -> di
             updated_at_utc=datetime.now(UTC),
         )
     )
+    response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     set_session_cookie(response, session.session_id)
-    return {"status": "authenticated"}
+    return response
 
 
 @app.post("/api/auth/cli/session")
@@ -359,8 +360,9 @@ async def copilot_auth_session(
 
 @app.post("/api/auth/logout")
 async def logout(request: Request, response: Response) -> dict[str, str]:
-    session = get_session(request)
-    delete_session(session.session_id)
+    session = _get_optional_session(request)
+    if session is not None:
+        delete_session(session.session_id)
     clear_session_cookie(response)
     return {"status": "signed_out"}
 
