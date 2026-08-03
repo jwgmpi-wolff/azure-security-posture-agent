@@ -166,7 +166,7 @@ def safe_auth_context(session: SessionState | None) -> dict[str, Any]:
         }
     return {
         "authenticated": True,
-        "authMode": session.principal.auth_mode.value,
+        "authMode": session.principal.auth_mode,
         "tenantId": session.selected_tenant_id,
         "subscriptionIds": session.selected_subscription_ids,
         "expiresOnUtc": session.principal.expires_on_utc.isoformat(),

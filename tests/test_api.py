@@ -30,6 +30,22 @@ def test_health_and_auth_context_contract() -> None:
     assert context.json()["authenticated"] is False
 
 
+def test_health_and_auth_context_serialize_authenticated_cli_session() -> None:
+    SESSION_STORE.clear()
+    SESSION_STORE["session-1"] = build_session()
+    client = TestClient(app)
+    client.cookies.set(settings.session_cookie_name, "session-1")
+
+    health = client.get("/api/health")
+    context = client.get("/api/auth/session")
+
+    assert health.status_code == 200
+    assert health.json()["authMode"] == "cli"
+    assert context.status_code == 200
+    assert context.json()["authenticated"] is True
+    assert context.json()["authMode"] == "cli"
+
+
 def test_export_returns_404_before_assessment_run() -> None:
     SESSION_STORE.clear()
     SESSION_STORE["session-1"] = build_session(latest_assessment=None)

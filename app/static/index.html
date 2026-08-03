@@ -4,9 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Azure Security Posture Agent</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css?v=20260803.2">
 </head>
 <body>
+    <div id="operationIndicator" class="operation-indicator" role="status" aria-live="polite" aria-hidden="true">
+        <span class="operation-spinner" aria-hidden="true"></span>
+        <span id="operationLabel">Running command</span>
+        <span id="operationElapsed" class="operation-elapsed">0s</span>
+    </div>
     <main class="shell">
         <section class="hero">
             <div>
@@ -55,15 +60,25 @@
         </section>
 
         <section class="grid two-up">
-            <article class="panel">
-                <h2>Assessment Controls</h2>
-                <div class="domain-grid" id="domainList"></div>
-                <label class="checkbox-row"><input id="includeGraph" type="checkbox"> Include optional Microsoft Graph enrichment</label>
-                <label class="checkbox-row"><input id="strictValidation" type="checkbox" checked> Strict live validation</label>
-                <div class="button-row">
-                    <button id="runAssessment">Run Assessment</button>
-                    <button id="loadLatest" class="secondary">Load Latest</button>
+            <article class="panel assessment-panel">
+                <div class="compact-panel-header">
+                    <div>
+                        <h2>Assessment</h2>
+                        <p id="domainSelectionSummary" class="result-count" aria-live="polite">Loading domains...</p>
+                    </div>
+                    <div class="button-row compact-actions">
+                        <button id="runAssessment">Run Assessment</button>
+                        <button id="loadLatest" class="secondary">Load Latest</button>
+                    </div>
                 </div>
+                <div class="assessment-options">
+                    <label class="checkbox-row"><input id="includeGraph" type="checkbox"> Microsoft Graph</label>
+                    <label class="checkbox-row"><input id="strictValidation" type="checkbox" checked> Strict validation</label>
+                </div>
+                <details class="domain-disclosure">
+                    <summary>Choose assessment domains</summary>
+                    <div class="domain-grid" id="domainList"></div>
+                </details>
             </article>
 
             <article class="panel">
@@ -83,47 +98,81 @@
 
         <section class="grid two-up results-layout">
             <article class="panel tall">
-                <h2>Findings</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Domain</th>
-                            <th>Severity</th>
-                            <th>Title</th>
-                            <th>Resource</th>
-                        </tr>
-                    </thead>
-                    <tbody id="findingsTable"></tbody>
-                </table>
+                <div class="result-heading">
+                    <div>
+                        <h2>Findings</h2>
+                        <p id="findingCount" class="result-count">No findings loaded</p>
+                    </div>
+                    <div class="filter-row">
+                        <label>Severity
+                            <select id="severityFilter">
+                                <option value="all">All severities</option>
+                                <option value="critical">Critical</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                                <option value="informational">Informational</option>
+                            </select>
+                        </label>
+                        <label>Domain
+                            <select id="domainFilter">
+                                <option value="all">All domains</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+                <div class="table-scroll findings-scroll">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Domain</th>
+                                <th>Severity</th>
+                                <th>Finding</th>
+                                <th>Resource</th>
+                            </tr>
+                        </thead>
+                        <tbody id="findingsTable"></tbody>
+                    </table>
+                </div>
             </article>
             <article class="panel tall evidence-panel">
                 <h2>Evidence</h2>
                 <div id="evidenceView" class="evidence-view">Select a finding to inspect live evidence.</div>
-                <h3>Partial Failures</h3>
-                <ul id="partialFailures" class="failure-list"></ul>
+                <div class="section-heading">
+                    <h3>Coverage Gaps</h3>
+                    <span id="failureCount" class="count-badge">0</span>
+                </div>
+                <div id="partialFailures" class="failure-list"></div>
             </article>
         </section>
 
         <section class="panel tall">
-            <h2>Recommendations</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Priority</th>
-                        <th>Recommendation</th>
-                        <th>Evidence</th>
-                        <th>Observed</th>
-                    </tr>
-                </thead>
-                <tbody id="recommendationsTable"></tbody>
-            </table>
+            <div class="result-heading">
+                <div>
+                    <h2>Recommendations</h2>
+                    <p id="recommendationCount" class="result-count">No recommendations loaded</p>
+                </div>
+            </div>
+            <div class="table-scroll recommendations-scroll">
+                <table class="results-table recommendations-table">
+                    <thead>
+                        <tr>
+                            <th>Priority</th>
+                            <th>Recommendation</th>
+                            <th>Evidence</th>
+                            <th>Observed</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recommendationsTable"></tbody>
+                </table>
+            </div>
         </section>
 
-        <section class="panel">
+        <section class="panel" id="statusPanel">
             <h2>Status</h2>
             <pre id="statusLog">Ready.</pre>
         </section>
     </main>
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=20260803.2"></script>
 </body>
 </html>

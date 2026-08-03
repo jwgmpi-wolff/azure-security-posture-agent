@@ -90,6 +90,16 @@ For a quick repeat run:
 .\deploy-local.ps1 -SkipInstall -SkipValidation
 ```
 
+## Dashboard Workflow
+
+1. Select **Use Azure CLI Session** to reuse the active delegated Azure CLI identity. The dashboard discovers the tenant from the issued token and loads the subscriptions visible to that identity.
+2. Confirm the tenant and subscription scope. Scope changes remain bound to the authenticated token tenant.
+3. Keep all twelve assessment domains selected or expand **Choose assessment domains** to narrow the run. Microsoft Graph enrichment is optional; strict validation remains enabled by default.
+4. Select **Run Assessment**. A sticky operation indicator shows the active command, elapsed time, and temporarily disables conflicting actions.
+5. Review severity and domain filters in **Findings**, select a row for its live evidence, and inspect **Coverage Gaps** for permission, provider, API-version, or upstream limitations.
+
+Findings and recommendations render inside bounded, independently scrollable frames. Wide tables scroll horizontally within their panel instead of overlapping the Evidence view, while long result sets retain sticky headers and vertical scrolling. Domain names and common source failures are normalized for readability; expandable details preserve the underlying evidence without presenting collection failures as clean results.
+
 ## Deploy Azure And Build The M365 Package
 
 ### GitHub workflow button
@@ -181,8 +191,10 @@ az bicep build --file infra/main.bicep
 ## Operational Notes
 
 - Sessions and the latest assessment are in memory and are cleared by process restart.
+- The local Azure CLI flow invokes the resolved Windows CLI command directly, accepts an initially blank tenant selection, and uses the token `tid` and JWT expiry as authoritative session metadata.
 - Provider registration, licensing, API version, and RBAC affect source coverage.
 - Microsoft Graph enrichment is optional and permission-limited.
+- The dashboard reports long-running commands visibly and keeps findings, recommendations, evidence, and coverage gaps within their owning frames on desktop and mobile layouts.
 - Runtime collectors contain no sample findings, random counts, stale fallback rows, or fabricated clean results.
 - Generated packages, exports, environments, token caches, `.env` files, and local Azure state are ignored by Git.
 

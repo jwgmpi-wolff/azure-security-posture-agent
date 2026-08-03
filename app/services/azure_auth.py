@@ -36,10 +36,7 @@ def _resolve_az_command() -> str:
 
 
 def _wrap_az_command(az_cmd: str, args: list[str]) -> list[str]:
-    command = [az_cmd, *args]
-    if az_cmd.lower().endswith(".cmd"):
-        return ["cmd", "/c", *command]
-    return command
+    return [az_cmd, *args]
 
 
 def _parse_expires_on(raw_value: str | int | None) -> datetime:
@@ -55,8 +52,6 @@ def _parse_expires_on(raw_value: str | int | None) -> datetime:
             return datetime.now(UTC)
         if raw_value.endswith("Z"):
             return datetime.fromisoformat(raw_value.replace("Z", "+00:00")).astimezone(UTC)
-        if "T" not in raw_value:
-            return datetime.now(UTC)
         return datetime.fromisoformat(raw_value.replace("Z", "+00:00")).astimezone(UTC)
 
 
@@ -164,18 +159,19 @@ async def exchange_browser_code(code: str, tenant_id: str, redirect_uri: str, ve
 
 def acquire_cli_principal(tenant_id: str) -> SessionPrincipal:
     az_cmd = _resolve_az_command()
+    requested_tenant_id = tenant_id.strip()
+    args = [
+        "account",
+        "get-access-token",
+        "--resource",
+        ARM_RESOURCE,
+    ]
+    if requested_tenant_id:
+        args.extend(["--tenant", requested_tenant_id])
+    args.extend(["--output", "json"])
     command = _wrap_az_command(
         az_cmd,
-        [
-            "account",
-            "get-access-token",
-            "--resource",
-            ARM_RESOURCE,
-            "--tenant",
-            tenant_id,
-            "--output",
-            "json",
-        ],
+        args,
     )
     process = subprocess.run(command, capture_output=True, text=True, timeout=120, check=False)
     if process.returncode != 0:
@@ -190,12 +186,16 @@ def acquire_cli_principal(tenant_id: str) -> SessionPrincipal:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Azure CLI did not return an access token.")
 
     claims = decode_jwt_payload_unsafe(access_token)
-    validate_tenant_claim(tenant_id, claims)
+    token_tenant_id = str(claims.get("tid") or "")
+    if not token_tenant_id:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Azure CLI token does not contain a tenant claim.")
+    if requested_tenant_id:
+        validate_tenant_claim(requested_tenant_id, claims)
     return SessionPrincipal(
         auth_mode=AuthMode.cli,
-        tenant_id=tenant_id,
+        tenant_id=token_tenant_id,
         access_token=access_token,
-        expires_on_utc=_parse_expires_on(payload.get("expiresOn") or claims.get("exp")),
+        expires_on_utc=_parse_expires_on(claims.get("exp") or payload.get("expires_on") or payload.get("expiresOn")),
         user_object_id=claims.get("oid"),
         username=claims.get("preferred_username") or claims.get("upn"),
         audience=claims.get("aud"),

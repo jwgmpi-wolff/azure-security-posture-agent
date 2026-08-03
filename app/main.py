@@ -259,7 +259,7 @@ async def plugin_outline_icon() -> FileResponse:
 @app.get("/api/health", response_model=HealthResponse)
 async def health_check(request: Request) -> HealthResponse:
     session = _get_optional_session(request)
-    return HealthResponse(status="ok", version=settings.app_version, build=settings.build_id, auth_mode=session.principal.auth_mode.value if session else "unauthenticated")
+    return HealthResponse(status="ok", version=settings.app_version, build=settings.build_id, auth_mode=session.principal.auth_mode if session else "unauthenticated")
 
 
 @app.get("/api/auth/context", response_model=AuthContextResponse)
@@ -319,11 +319,12 @@ async def browser_auth_callback(code: str, state: str, response: Response) -> di
 @app.post("/api/auth/cli/session")
 async def cli_auth_session(payload: CliLoginRequest, response: Response) -> dict[str, object]:
     principal = acquire_cli_principal(payload.tenant_id)
+    selected_tenant_id = principal.tenant_id
     session = create_session(
         SessionState(
             session_id=secrets.token_urlsafe(32),
             principal=principal,
-            selected_tenant_id=payload.tenant_id,
+            selected_tenant_id=selected_tenant_id,
             selected_subscription_ids=payload.subscription_ids,
             latest_assessment=None,
             created_at_utc=datetime.now(UTC),
@@ -331,7 +332,7 @@ async def cli_auth_session(payload: CliLoginRequest, response: Response) -> dict
         )
     )
     set_session_cookie(response, session.session_id)
-    return {"status": "authenticated", "tenantId": payload.tenant_id, "subscriptionIds": payload.subscription_ids}
+    return {"status": "authenticated", "tenantId": selected_tenant_id, "subscriptionIds": payload.subscription_ids}
 
 
 @app.post("/api/auth/copilot/session")
