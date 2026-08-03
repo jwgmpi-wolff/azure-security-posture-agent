@@ -152,7 +152,9 @@ Approval of this plan authorizes local file generation and local validation only
 | --- | --- |
 | `python -m py_compile app/main.py` | Passed |
 | `python -m py_compile app/models.py` | Passed |
-| `python -m pytest -q` | Passed: 9 tests, no skips |
+| `python -m pytest -q` | Passed: 25 tests, no skips |
+| `python -m py_compile app/main.py app/services/azure_auth.py` | Passed |
+| PowerShell parser: `build-and-deploy-containerapp.ps1` | Passed: no syntax errors |
 | VS Code diagnostics | Passed: no project errors |
 | `az bicep build --file infra/main.bicep` | Passed with no template diagnostics; CLI upgrade notice only |
 | ARM and parameters JSON parsing | Passed |

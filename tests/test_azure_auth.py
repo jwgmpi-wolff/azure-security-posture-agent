@@ -4,7 +4,7 @@ import json
 from subprocess import CompletedProcess
 from urllib.parse import parse_qs, urlparse
 
-from app.services.azure_auth import _parse_expires_on, _wrap_az_command, acquire_cli_principal, build_authorization_url, validate_jwt_token
+from app.services.azure_auth import _parse_expires_on, _wrap_az_command, acquire_cli_principal, build_authorization_url, exchange_browser_code, validate_jwt_token
 
 
 def test_browser_authorization_forces_account_selection() -> None:
@@ -51,6 +51,56 @@ def test_arm_v1_token_uses_tenant_v1_openid_issuer(monkeypatch) -> None:
     assert claims["iss"] == expected_issuer
     assert captured["metadata"] == "tenant-1:1.0"
     assert captured["issuer"] == expected_issuer
+
+
+def test_browser_exchange_validates_id_token_and_keeps_arm_token_opaque(monkeypatch) -> None:
+    captured: dict[str, str] = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def json(self):
+            return {
+                "access_token": "opaque-arm-access-token",
+                "id_token": "signed-id-token",
+                "expires_in": 3600,
+            }
+
+    class FakeAsyncClient:
+        def __init__(self, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, traceback):
+            return False
+
+        async def post(self, url, data):
+            captured["token_url"] = url
+            return FakeResponse()
+
+    async def fake_validate(token: str, tenant_id: str, audience: str):
+        captured["validated_token"] = token
+        captured["validated_audience"] = audience
+        return {
+            "tid": tenant_id,
+            "oid": "user-1",
+            "preferred_username": "user@example.com",
+            "aud": audience,
+            "iss": "https://login.microsoftonline.com/tenant-1/v2.0",
+        }
+
+    monkeypatch.setattr("app.services.azure_auth.settings.entra_client_id", "client-1")
+    monkeypatch.setattr("app.services.azure_auth.httpx.AsyncClient", FakeAsyncClient)
+    monkeypatch.setattr("app.services.azure_auth.validate_jwt_token", fake_validate)
+
+    principal = asyncio.run(exchange_browser_code("code", "tenant-1", "http://localhost/callback", "verifier"))
+
+    assert principal.access_token == "opaque-arm-access-token"
+    assert principal.username == "user@example.com"
+    assert captured["validated_token"] == "signed-id-token"
+    assert captured["validated_audience"] == "client-1"
 
 
 def test_parse_expires_on_accepts_azure_cli_windows_format() -> None:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from shutil import which
 from urllib.parse import urlparse
@@ -147,13 +147,18 @@ async def exchange_browser_code(code: str, tenant_id: str, redirect_uri: str, ve
     access_token = payload.get("access_token")
     if not access_token:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Browser exchange did not return an access token.")
+    id_token = payload.get("id_token")
+    if not id_token:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Browser exchange did not return an ID token.")
 
-    claims = await validate_jwt_token(access_token, tenant_id, ARM_RESOURCE)
+    claims = await validate_jwt_token(id_token, tenant_id, settings.entra_client_id)
+    expires_in = int(payload.get("expires_in") or 0)
+    expires_on = datetime.now(UTC) + timedelta(seconds=expires_in) if expires_in else _parse_expires_on(claims.get("exp"))
     return SessionPrincipal(
         auth_mode=AuthMode.browser,
         tenant_id=tenant_id,
         access_token=access_token,
-        expires_on_utc=_parse_expires_on(payload.get("expires_on") or claims.get("exp")),
+        expires_on_utc=expires_on,
         user_object_id=claims.get("oid"),
         username=claims.get("preferred_username") or claims.get("upn"),
         audience=claims.get("aud"),
