@@ -1,6 +1,7 @@
 const state = {
   latestAssessment: null,
   findingsById: new Map(),
+  selectedFindingId: null,
   operationCount: 0,
 };
 
@@ -28,6 +29,9 @@ const strictValidation = document.getElementById("strictValidation");
 const domainSelectionSummary = document.getElementById("domainSelectionSummary");
 const severityFilter = document.getElementById("severityFilter");
 const domainFilter = document.getElementById("domainFilter");
+const remediationDialog = document.getElementById("remediationDialog");
+const remediationDialogContent = document.getElementById("remediationDialogContent");
+const closeRemediationDialog = document.getElementById("closeRemediationDialog");
 
 function formatLabel(value) {
   return String(value || "Unknown")
@@ -152,6 +156,7 @@ function renderSession(payload) {
 function renderAssessment(assessment) {
   state.latestAssessment = assessment;
   state.findingsById.clear();
+  state.selectedFindingId = null;
   summaryCards.innerHTML = `
     <article class="summary-card"><span>Total Findings</span><strong>${assessment.summary.totalFindings}</strong></article>
     <article class="summary-card"><span>Partial Failures</span><strong>${assessment.summary.partialFailureCount}</strong></article>
@@ -160,7 +165,6 @@ function renderAssessment(assessment) {
   `;
 
   partialFailures.innerHTML = "";
-  recommendationsTable.innerHTML = "";
   scopeBanner.textContent = `Tenant: ${assessment.summary.tenantName || assessment.summary.tenantId} | Subscriptions: ${assessment.summary.subscriptionNames?.join(", ") || assessment.summary.subscriptionIds.join(", ")} | Evidence observed: ${assessment.summary.observedAtUtc}`;
 
   (assessment.findings || []).forEach((finding) => {
@@ -176,7 +180,7 @@ function renderAssessment(assessment) {
       option.textContent = formatLabel(domain);
       domainFilter.appendChild(option);
     });
-  renderFilteredFindings();
+  renderFilteredResults();
 
   (assessment.partialFailures || []).forEach((failure) => {
     const card = document.createElement("article");
@@ -193,27 +197,20 @@ function renderAssessment(assessment) {
   });
   failureCount.textContent = String((assessment.partialFailures || []).length);
 
-  (assessment.recommendations || []).forEach((recommendation) => {
-    const finding = state.findingsById.get(recommendation.findingId);
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td><span class="pill ${escapeHtml(recommendation.priority)}">${escapeHtml(recommendation.priority)}</span></td>
-      <td>${escapeHtml(recommendation.recommendation)}</td>
-      <td>${escapeHtml(recommendation.evidenceId)}</td>
-      <td>${escapeHtml(finding?.observedAtUtc || assessment.summary.observedAtUtc)}</td>
-    `;
-    recommendationsTable.appendChild(row);
-  });
-  recommendationCount.textContent = `${(assessment.recommendations || []).length} evidence-linked recommendations`;
 }
 
-function renderFilteredFindings() {
+function filteredFindings() {
   const findings = state.latestAssessment?.findings || [];
-  const filtered = findings.filter((finding) => {
+  return findings.filter((finding) => {
     const severityMatches = severityFilter.value === "all" || finding.severity === severityFilter.value;
     const domainMatches = domainFilter.value === "all" || finding.domain === domainFilter.value;
     return severityMatches && domainMatches;
   });
+}
+
+function renderFilteredResults() {
+  const findings = state.latestAssessment?.findings || [];
+  const filtered = filteredFindings();
 
   findingsTable.innerHTML = "";
   filtered.forEach((finding) => {
@@ -226,10 +223,153 @@ function renderFilteredFindings() {
       <td>${escapeHtml(finding.title)}</td>
       <td class="finding-resource" title="${escapeHtml(resource)}">${escapeHtml(resource)}</td>
     `;
-    row.addEventListener("click", () => renderEvidence(finding.findingId));
+    row.addEventListener("click", () => selectFinding(finding.findingId));
     findingsTable.appendChild(row);
   });
   findingCount.textContent = `${filtered.length} of ${findings.length} findings shown`;
+  renderFilteredRecommendations(filtered);
+}
+
+function renderFilteredRecommendations(findings) {
+  const recommendations = state.latestAssessment?.recommendations || [];
+  const visibleFindingIds = new Set(findings.map((finding) => finding.findingId));
+  const filtered = recommendations.filter((recommendation) => visibleFindingIds.has(recommendation.findingId));
+
+  recommendationsTable.innerHTML = "";
+  filtered.forEach((recommendation) => {
+    const finding = state.findingsById.get(recommendation.findingId);
+    const row = document.createElement("tr");
+    row.dataset.findingId = recommendation.findingId;
+    if (recommendation.findingId === state.selectedFindingId) {
+      row.classList.add("is-selected");
+    }
+    row.innerHTML = `
+      <td><span class="pill ${escapeHtml(recommendation.priority)}">${escapeHtml(recommendation.priority)}</span></td>
+      <td>${escapeHtml(recommendation.recommendation)}</td>
+      <td><button class="text-button remediation-guide" type="button">View fix guide</button></td>
+      <td>${escapeHtml(recommendation.evidenceId)}</td>
+      <td>${escapeHtml(finding?.observedAtUtc || state.latestAssessment.summary.observedAtUtc)}</td>
+    `;
+    row.querySelector(".remediation-guide").addEventListener("click", () => showRemediationGuide(recommendation));
+    recommendationsTable.appendChild(row);
+  });
+  recommendationCount.textContent = `${filtered.length} of ${recommendations.length} evidence-linked recommendations shown`;
+}
+
+function remediationActions(remediationText) {
+  const simplified = String(remediationText || "Review the finding and fix the unsafe setting.")
+    .replaceAll("remediate", "fix")
+    .replaceAll("remediation", "fix")
+    .replaceAll("validate", "check")
+    .replaceAll("configure", "set up")
+    .replaceAll("utilize", "use");
+  return simplified
+    .split(/(?:\.|;|, then | and then )\s*/i)
+    .map((step) => step.trim())
+    .filter(Boolean)
+    .map((step) => `${step.charAt(0).toUpperCase()}${step.slice(1)}.`);
+}
+
+function estimateEffort(recommendation) {
+  const actionCount = remediationActions(recommendation.remediationText).length;
+  if (actionCount >= 3 || recommendation.remediationCommandText) {
+    return { level: "High", detail: "Several changes or a command may be needed." };
+  }
+  if (actionCount === 2) {
+    return { level: "Medium", detail: "A few settings need to be checked or changed." };
+  }
+  return { level: "Low", detail: "This is likely one focused check or change." };
+}
+
+function microsoftLearnArticle(domain) {
+  const articles = {
+    security_overview: {
+      title: "Review your secure score",
+      url: "https://learn.microsoft.com/azure/defender-for-cloud/secure-score-security-controls",
+    },
+    defender_for_cloud_posture: {
+      title: "Defender for Cloud recommendations reference",
+      url: "https://learn.microsoft.com/azure/defender-for-cloud/recommendations-reference",
+    },
+    azure_policy_and_compliance: {
+      title: "What is Azure Policy?",
+      url: "https://learn.microsoft.com/azure/governance/policy/overview",
+    },
+    identity_and_access_posture: {
+      title: "Best practices for Azure RBAC",
+      url: "https://learn.microsoft.com/azure/role-based-access-control/best-practices",
+    },
+    management_group_and_subscription_governance: {
+      title: "What are Azure management groups?",
+      url: "https://learn.microsoft.com/azure/governance/management-groups/overview",
+    },
+    network_security: {
+      title: "Azure network security best practices",
+      url: "https://learn.microsoft.com/azure/security/fundamentals/network-best-practices",
+    },
+    storage_security: {
+      title: "Security recommendations for Blob Storage",
+      url: "https://learn.microsoft.com/azure/storage/blobs/security-recommendations",
+    },
+    key_vault_security: {
+      title: "Azure Key Vault security overview",
+      url: "https://learn.microsoft.com/azure/key-vault/general/security-features",
+    },
+    compute_and_vm_security: {
+      title: "Security recommendations for Azure virtual machines",
+      url: "https://learn.microsoft.com/azure/virtual-machines/security-recommendations",
+    },
+    aks_and_container_security: {
+      title: "Security concepts for applications and clusters in AKS",
+      url: "https://learn.microsoft.com/azure/aks/concepts-security",
+    },
+    logging_monitoring_and_evidence_retention: {
+      title: "Azure Monitor overview",
+      url: "https://learn.microsoft.com/azure/azure-monitor/fundamentals/overview",
+    },
+    security_recommendations_register: {
+      title: "Security recommendations in Microsoft Defender for Cloud",
+      url: "https://learn.microsoft.com/azure/defender-for-cloud/review-security-recommendations",
+    },
+  };
+  return articles[domain] || articles.security_overview;
+}
+
+function showRemediationGuide(recommendation) {
+  const finding = state.findingsById.get(recommendation.findingId);
+  const effort = estimateEffort(recommendation);
+  const actionSteps = remediationActions(recommendation.remediationText);
+  const resourceName = finding?.affectedResourceName || finding?.affectedResourceId || "the affected resource";
+  const learnArticle = microsoftLearnArticle(finding?.domain);
+  const steps = [
+    "Ask the resource owner for approval. Pick a time when a short service problem will have the least impact.",
+    "Write down the current setting or take a screenshot. You will need this old value if you must undo the change.",
+    `Sign in to the Azure portal. Check that you are in the correct tenant and subscription, then search for ${resourceName}.`,
+    `Open ${resourceName}. Compare its resource ID and resource group with the finding so you do not change the wrong resource.`,
+    "Open the settings page related to this finding, such as Networking, Configuration, Access control, Security, or Diagnostic settings. Read the current value before changing it.",
+    ...actionSteps.map((action) => `${action} Use the smallest change that meets the recommendation, then select Save or Apply.`),
+    "Wait for Azure to report that the update finished. If Azure shows an error, stop and read the error before trying again.",
+    "Test the resource the way its users normally use it. Check that the application still connects and that monitoring shows no new failures.",
+    "Run this security assessment again. Confirm that this finding is gone or that its evidence now shows the safer value.",
+    "If the resource stops working, put back the old value you recorded and tell the resource owner what happened.",
+  ];
+  remediationDialogContent.innerHTML = `
+    <p class="dialog-eyebrow">Step-by-step fix guide</p>
+    <h2 id="remediationDialogTitle">${escapeHtml(finding?.title || recommendation.title)}</h2>
+    <div class="effort-level"><strong>Estimated effort: ${escapeHtml(effort.level)}</strong><span>${escapeHtml(effort.detail)}</span></div>
+    <ol>${steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
+    ${recommendation.remediationCommandText ? `<h3>Command</h3><p>Run this only after the resource owner says it is okay.</p><pre><code>${escapeHtml(recommendation.remediationCommandText)}</code></pre>` : ""}
+    <div class="learn-article"><strong>Microsoft Learn</strong><a href="${escapeHtml(learnArticle.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(learnArticle.title)}</a></div>
+    <p class="dialog-note">This guide explains the assessment recommendation. It does not make changes for you.</p>
+  `;
+  remediationDialog.showModal();
+}
+
+function selectFinding(findingId) {
+  state.selectedFindingId = findingId;
+  renderEvidence(findingId);
+  renderFilteredRecommendations(filteredFindings());
+  recommendationsTable.querySelector(`tr[data-finding-id="${CSS.escape(findingId)}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
 }
 
 function renderEvidence(findingId) {
@@ -387,8 +527,14 @@ selectAllSubscriptions.addEventListener("change", () => {
     option.selected = selectAllSubscriptions.checked;
   });
 });
-severityFilter.addEventListener("change", renderFilteredFindings);
-domainFilter.addEventListener("change", renderFilteredFindings);
+severityFilter.addEventListener("change", renderFilteredResults);
+domainFilter.addEventListener("change", renderFilteredResults);
+closeRemediationDialog.addEventListener("click", () => remediationDialog.close());
+remediationDialog.addEventListener("click", (event) => {
+  if (event.target === remediationDialog) {
+    remediationDialog.close();
+  }
+});
 domainList.addEventListener("change", updateDomainSelectionSummary);
 document.querySelectorAll(".export").forEach((button) => button.addEventListener("click", () => runCommand(`Preparing ${button.dataset.export.toUpperCase()} export`, () => exportAssessment(button.dataset.export))));
 

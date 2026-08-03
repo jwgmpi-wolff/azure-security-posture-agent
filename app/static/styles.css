@@ -363,14 +363,18 @@ table {
 }
 
 .recommendations-table th:nth-child(2) {
-  width: 50%;
+  width: 38%;
 }
 
 .recommendations-table th:nth-child(3) {
-  width: 20%;
+  width: 14%;
 }
 
 .recommendations-table th:nth-child(4) {
+  width: 18%;
+}
+
+.recommendations-table th:nth-child(5) {
   width: 18%;
 }
 
@@ -393,6 +397,26 @@ tbody tr {
 
 tbody tr:hover {
   background: rgba(15, 118, 110, 0.08);
+}
+
+tbody tr.is-selected {
+  background: rgba(15, 118, 110, 0.14);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+
+button.text-button {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #2457c5;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+button.text-button:hover {
+  transform: none;
+  color: #173b8f;
 }
 
 .result-heading,
@@ -540,6 +564,95 @@ pre {
 
 .tall {
   min-height: 420px;
+}
+
+.remediation-dialog {
+  width: min(680px, calc(100vw - 32px));
+  max-height: min(760px, calc(100vh - 32px));
+  padding: 28px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffdf9;
+  color: var(--ink);
+  box-shadow: 0 24px 70px rgba(27, 43, 52, 0.3);
+}
+
+.remediation-dialog::backdrop {
+  background: rgba(27, 43, 52, 0.62);
+}
+
+.dialog-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  background: #274c5b;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.dialog-eyebrow {
+  margin-bottom: 8px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.remediation-dialog h2 {
+  max-width: calc(100% - 42px);
+  font-size: 1.55rem;
+  line-height: 1.2;
+}
+
+.remediation-dialog ol {
+  padding-left: 24px;
+}
+
+.remediation-dialog li {
+  margin-bottom: 12px;
+  padding-left: 6px;
+  line-height: 1.5;
+}
+
+.effort-level {
+  display: grid;
+  gap: 4px;
+  margin: 18px 0;
+  padding: 14px;
+  border-left: 4px solid var(--accent);
+  background: var(--accent-soft);
+}
+
+.effort-level span,
+.dialog-note {
+  color: var(--muted);
+}
+
+.learn-article {
+  display: grid;
+  gap: 6px;
+  margin: 22px 0 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.learn-article a {
+  width: fit-content;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dialog-note {
+  margin-bottom: 0;
+  font-size: 0.88rem;
 }
 
 @media (max-width: 960px) {

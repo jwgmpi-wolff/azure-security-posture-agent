@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Azure Security Posture Agent</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260803.2">
+    <link rel="stylesheet" href="/static/styles.css?v=20260803.4">
 </head>
 <body>
     <div id="operationIndicator" class="operation-indicator" role="status" aria-live="polite" aria-hidden="true">
@@ -159,6 +159,7 @@
                         <tr>
                             <th>Priority</th>
                             <th>Recommendation</th>
+                            <th>Fix Guide</th>
                             <th>Evidence</th>
                             <th>Observed</th>
                         </tr>
@@ -173,6 +174,10 @@
             <pre id="statusLog">Ready.</pre>
         </section>
     </main>
-    <script src="/static/app.js?v=20260803.2"></script>
+    <dialog id="remediationDialog" class="remediation-dialog" aria-labelledby="remediationDialogTitle">
+        <button id="closeRemediationDialog" class="dialog-close" type="button" aria-label="Close fix guide" title="Close">&times;</button>
+        <div id="remediationDialogContent"></div>
+    </dialog>
+    <script src="/static/app.js?v=20260803.4"></script>
 </body>
 </html>
