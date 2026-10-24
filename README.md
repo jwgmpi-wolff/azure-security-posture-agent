@@ -9,6 +9,15 @@
 
 A live-data-only, read-only Azure security assessment service with a FastAPI API, responsive browser dashboard, evidence-backed exports, and a Microsoft 365 Copilot declarative agent. It uses the signed-in user's delegated Azure RBAC and never executes remediation.
 
+<!-- project-downloads:start -->
+## APK and installer downloads
+
+No packaged APK or desktop installer is currently published for this repository. The source archive below is not an installer; use the project-specific setup and build instructions.
+
+- [Download the complete source ZIP](https://github.com/jwgmpi-wolff/azure-security-posture-agent/archive/refs/heads/main.zip).
+- [Setup script: deploy-local.ps1](./deploy-local.ps1) (download and extract the complete source ZIP first).
+<!-- project-downloads:end -->
+
 ## Deployment Options
 
 | Entry point | Functionality | Required boundary |
@@ -296,3 +305,9 @@ Ignore environments, caches, exports, generated packages, .env, token caches, lo
 ## License
 
 No license has been granted by this repository. Add an approved license before third-party redistribution.
+
+## Copyright
+
+Copyright (c) 2026 Jerry Wolff. See [COPYRIGHT](COPYRIGHT) for the scope of this
+notice. Existing licenses and third-party attribution remain unchanged; this
+notice does not grant additional permissions.
